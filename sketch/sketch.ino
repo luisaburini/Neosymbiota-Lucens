@@ -13,6 +13,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Dabble.h>
+#include <Servo.h>
 
 // Sensor ultrassônico JSN-SR04T / AJ-SR04M.
 // a prova d'agua para medir distancia do obstáculo.
@@ -22,10 +23,18 @@ int dist = 0;    // distancia medida pelo sensor.
 long tempo;      // intervalo de tempo da reflezão da onda no sensor.
 
 
+// Controle dos servo motores
+#define SERVO_ESQ 9
+#define SERVO_DIR 10
+Servo esq; // motor da esquerda
+Servo dir; // motor da direita
+
 void setup() {
   // put your setup code here, to run once:
   pinMode(ECHO, INPUT);   // pino ECHO do sensor esta configurado como entrada recebendo o sinal refletido.
   pinMode(TRIG, OUTPUT);  // pino TRIG do sensor esta configurado como saida, acionando a emissao da onda.
+	esq.attach(SERVO_ESQ);
+	dir.attach(SERVO_DIR);
   Serial.begin(9600);
   Dabble.begin(9600);
 }
@@ -34,6 +43,7 @@ void loop() {
   // put your main code here, to run repeatedly:
   medeDistancia();
   ouveChamado();
+  leControle();
 }
 
 
@@ -90,4 +100,60 @@ void ouveChamado() {
   if (freqMag > magnitudeThreshold) {
     Serial.println("Tem alguem chamando");
   }
+}
+
+void leControle() {
+Dabble.processInput();
+	if(GamePad.isPressed(0)) {
+		esq.write(-360);
+		// esq.run(BACKWARD);
+		dir.write(360);
+		// dir.run(FORWARD);
+	}
+	else {
+		if(GamePad.isPressed(1)) {
+			esq.write(360);
+			// esq.run(FORWARD);
+			dir.write(-360);
+			// dir.run(BACKWARD);
+		}
+		else {
+			if(GamePad.isPressed(2)) {
+				esq.write(0);
+				// esq.run(BACKWARD);
+				dir.write(360);
+				// dir.run(FORWARD);
+			}
+			else {
+				if(GamePad.isPressed(3)) {
+					esq.write(-360);
+					// esq.run(BACKWARD);
+					dir.write(0);
+					// dir.run(FORWARD);
+				}
+				else {
+					if(GamePad.isPressed(9)) {
+						esq.write(360);
+						// esq.run(FORWARD);
+						dir.write(360);
+						// dir.run(FORWARD);
+					}
+					else {
+						if(GamePad.isPressed(7)) {
+							esq.write(-360);
+							// esq.run(BACKWARD);
+							dir.write(-360);
+							// dir.run(BACKWARD);
+						}
+						else {
+							esq.write(360);
+							// esq.run(BACKWARD);
+							dir.write(360);
+							// dir.run(FORWARD);
+						}
+					}
+				}
+			}
+		}
+	}
 }

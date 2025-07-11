@@ -18,6 +18,16 @@ Integração de Arduino UNO com
 
 ## Componentes
 
+Proposta de conexões com microfone, motor, sensor de distância e placa solar
+* Motor Servo Direita: 9
+* Motor Servo Esquerda: 10
+* Microfone Out: A0
+* Sensor Ultrassonico Echo: 11
+* Sensor Ultrassonico Trig: 12
+**Atenção ao energizar o arduino pelo VIN**
+**Verificar especificações do servo motor para energizar eles**
+![Proposta pinout](./sketches/pinout_servo.png)
+
 * 1 [Sensor de distância ultrassônico](https://www.mercadolivre.com.br/2x-sensor-ultrassnico-hc-sr04-de-distncia-para-arduino/p/MLB33346342?pdp_filters=item_id:MLB4512736584#polycard_client=recommendations_vip-pads-up&reco_backend=vip-pads-up-experimental-a_marketplace&wid=MLB4512736584&reco_model=rk_ent_v2_retsys_ads&reco_client=vip-pads-up&reco_item_pos=1&reco_backend_type=low_level&reco_id=ac27085a-d977-4706-8167-e5cd65d4a4f2&sid=recos&is_advertising=true&ad_domain=VIPDESKTOP_UP&ad_position=2&ad_click_id=Y2MwZGEzZGEtZGJiMy00YzIxLWEyMmYtYWJjMDliMTI3OTJj)
 * 1 [Microfone](https://produto.mercadolivre.com.br/MLB-3527016353-modulo-microfone-max4466-ganho-ajustavel-arduino-pic-esp-_JM#polycard_client=search-nordic&position=27&search_layout=stack&type=item&tracking_id=2258674f-dd40-4e4d-8389-b0f20a669a16&wid=MLB3527016353&sid=search)
 * 1 [Bomba de agua (pequena)](https://www.mercadolivre.com.br/mini-bomba-dagua-submersa-pra-arduino-3v-a-6v-dc-120l/p/MLB36183625?pdp_filters=item_id:MLB3774349427#wid=MLB3774349427&sid=search&is_advertising=true&searchVariation=MLB36183625&backend_model=search-backend&position=21&search_layout=grid&type=pad&tracking_id=271e353b-0d9a-455f-979f-0b4e5734c3d4&is_advertising=true&ad_domain=VQCATCORE_LST&ad_position=21&ad_click_id=OGI1ODRiYmMtODYwZC00YzczLTg1YTctZjMxM2ZmZWRlY2Fk)
