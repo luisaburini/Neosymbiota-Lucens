@@ -13,25 +13,29 @@
 #include <Dabble.h>
 #define CUSTOM_SETTINGS
 #define INCLUDE_GAMEPAD_MODULE
-#include <AFMotor.h>
 
-// Expansor de pinos GPIO
-const int pcfAddress = 0x3F;
 
 /****************************************************
  * Sensor ultrassônico JSN-SR04T / AJ-SR04M         *
  * a prova d'agua para medir distancia do obstáculo *
  *****************************************************/
-#define ECHO 11 //  Pino ECHO do sensor esta conectado ao pino 11 do arduino.
-#define TRIG 12 // Pino TRIG do sensor esta conectado ao pino 12 do arduino.
-int dist = 0;   // distancia medida pelo sensor.
-long tempo = 0; // intervalo de tempo da reflezão da onda no sensor.
+#define ECHO1 11 //  Pino ECHO1 do sensor esta conectado ao pino 11 do arduino.
+#define TRIG1 12 // Pino TRIG1 do sensor esta conectado ao pino 12 do arduino.
+int dist1 = 0;   // distancia medida pelo sensor.
+long tempo1 = 0; // intervalo de tempo1 da reflezão da onda no sensor.
+bool obstaculo1Proximo = false;
+bool obstaculo2Proximo = false;
 
 /***************************
  * Controle dos motores DC *
  ***************************/
-AF_DCMotor motor3(3);  // motor da esquerda
-AF_DCMotor motor1(1);  // motor da direita
+#define MOTOR1_IN1 4
+#define MOTOR1_IN2 8
+#define MOTOR1_ENABLE 6
+
+#define MOTOR2_IN1 9
+#define MOTOR2_IN2 10
+#define MOTOR2_ENABLE 13
 
 /**********************************************
  * Microfone Módulo Amplificador De Som LM393 *
@@ -52,37 +56,55 @@ float magnitudeThreshold = 73.0;
 
 void setup() {
 	// put your setup code here, to run once:
-	pinMode(ECHO, INPUT);   // pino ECHO do sensor esta configurado como entrada recebendo o sinal refletido.
-	pinMode(TRIG, OUTPUT);  // pino TRIG do sensor esta configurado como saida, acionando a emissao da onda.
+	pinMode(ECHO1, INPUT);   // pino ECHO1 do sensor esta configurado como entrada recebendo o sinal refletido.
+	pinMode(TRIG1, OUTPUT);  // pino TRIG1 do sensor esta configurado como saida, acionando a emissao da onda.
 	Serial.begin(9600);
 	Dabble.begin(9600);
 	// microfone
 	pinMode(MIC1_ANALOG, INPUT);
 	pinMode(MIC1_DIGITAL, INPUT);
 	// inicializacao dos motores
-	motor3.setSpeed(0);
-	motor1.setSpeed(0);
+	pinMode(MOTOR1_IN1, INPUT);
+	pinMode(MOTOR1_IN2, INPUT);
+	pinMode(MOTOR1_ENABLE, INPUT);
+	pinMode(MOTOR2_IN1, INPUT);
+	pinMode(MOTOR2_IN2, INPUT);
+	pinMode(MOTOR2_ENABLE, INPUT);
+	desligaMotor1();
 }
 
 void loop() {
 	// put your main code here, to run repeatedly:
-	medeDistancia();
+	mededistancia();
 	ouveChamado();
-	leControle();
+	//leControle();
 }
 
 
-void medeDistancia() {
-  digitalWrite(TRIG, LOW);      // define pino TRIG como LOW para garantir que comece como zero.
+void mededistancia() {
+  digitalWrite(TRIG1, LOW);      // define pino TRIG1 como LOW para garantir que comece como zero.
   delay(10);                     // espera 4 milissegundos antes de enviar o pulso.
-  digitalWrite(TRIG, HIGH);     // define pino TRIG como HIGH para enviar a onda ultrassonica.
+  digitalWrite(TRIG1, HIGH);     // define pino TRIG1 como HIGH para enviar a onda ultrassonica.
   delay(10);                    // espera 10 milissegundos para garantir que onda seja emitida.
-  digitalWrite(TRIG, LOW);      // define pino TRIG como LOW para finalizar emissao da onda.
-  tempo = pulseIn(ECHO, HIGH);  // pino ECHO e ativado quando o sinal refletido e recebido. pulseIn mede o tempo em que o pino ECHO esta em HIGH.
-  dist = (tempo * 0.034) / 2;    // calcula a distancia, considerando o tempo de ida e volta da onda.
-  Serial.print("Distancia medida: ");
-  Serial.print(dist);
+  digitalWrite(TRIG1, LOW);      // define pino TRIG1 como LOW para finalizar emissao da onda.
+  tempo1 = pulseIn(ECHO1, HIGH);  // pino ECHO1 e ativado quando o sinal refletido e recebido. pulseIn mede o tempo1 em que o pino ECHO1 esta em HIGH.
+  dist1 = (tempo1 * 0.034) / 2;    // calcula a dist1ancia, considerando o tempo1 de ida e volta da onda.
+  Serial.print("distancia medida: ");
+  Serial.print(dist1);
   Serial.println(" cm");
+	if (dist1 < 10) {
+		obstaculo1Proximo = true;
+		Serial.println("OBSTACULO MUITO PROXIMO");
+		ligaMotor1();
+		paraFrenteMotor1();
+		desligaMotor2();
+	} else {
+		obstaculo1Proximo = false;
+		Serial.println("OBSTACULO MUITO LONGE");
+		desligaMotor1();
+		ligaMotor2();
+		paraFrenteMotor2();
+	}
   delay(500);
 }
 
@@ -93,13 +115,13 @@ int frequencyToBin(float freq, float samplingFreq, int numSamples) {
 }
 
 void ouveChamado() {
-	long microseconds = micros();  // comeca tempo para coletar amostras.
+	long microseconds = micros();  // comeca tempo1 para coletar amostras.
 	for (int i = 0; i < SAMPLES; i++) {
 		Real1[i] = analogRead(MIC1_ANALOG);  // amostra do MIC1;
-		Serial.println("Real");
-		Serial.println(Real1[i]);
+		// Serial.println("Real");
+		// Serial.println(Real1[i]);
 		Imag1[i] = 0;
-		// espera tempo de coleta da amostra terminar.
+		// espera tempo1 de coleta da amostra terminar.
     while ((micros() - microseconds) < SAMPLING_PERIOD_US);
     microseconds += SAMPLING_PERIOD_US;
 	}
@@ -111,29 +133,27 @@ void ouveChamado() {
 	int targetBin = frequencyToBin(targetFreq, SAMPLING_FREQ, SAMPLES);
 	float freqMag = Real1[targetBin];
 	if (freqMag > magnitudeThreshold) {
-		Serial.println("ANALOG: Tem alguem chamando");
-	// 		motor3.setSpeed(255);
-	// 		motor3.run(FORWARD);
-	// 		motor1.setSpeed(255);
-	// 		motor1.run(FORWARD);
+		Serial.println("ANALOG: TEM ALGUEM CHAMANDO");
+		ligaMotor1();
+		paraTrasMotor1();
 	} else {
-	// 		motor3.setSpeed(0);
-	// 		motor3.run(FORWARD);
-	// 		motor1.setSpeed(0);
-	// 		motor1.run(FORWARD);
 		Serial.println(freqMag);
-		Serial.println("ANALOG: Ninguem chamando");
+		Serial.println("analog: ninguem chamando");
+		if (!obstaculo1Proximo){
+			desligaMotor1();
+		}
 	}
-	delay(100);
+	delay(500);
 	bool digital = digitalRead(MIC1_DIGITAL);
 	if (digital == HIGH) {
-		Serial.println("DIGITAL HIGH: Tem alguem chamando");
-// 		motor3.setSpeed(255);
-// 		motor3.run(FORWARD);
-// 		motor1.setSpeed(255);
-// 		motor1.run(FORWARD);
+		Serial.println("DIGITAL HIGH: TEM ALGUEM CHAMANDO");
+		ligaMotor1();
+		paraTrasMotor1();
 	} else {
 		Serial.println("digital low: ninguem chamando");
+		if (!obstaculo1Proximo){
+			desligaMotor1();
+		}
 	}
 	delay(500);
 }
@@ -141,61 +161,105 @@ void ouveChamado() {
 void leControle() {
 	Dabble.processInput();
 	if (GamePad.isPressed(0)) {
-		// Serial.println("Pressionou 0");
-		motor3.setSpeed(255);
-		motor3.run(BACKWARD);
-		motor1.setSpeed(255);
-		motor1.run(FORWARD);
+		Serial.println("Pressionou 0");
+		// motor3.setSpeed(255);
+		// motor3.run(BACKWARD);
+		ligaMotor1();
+		paraFrenteMotor1();
 		return;
 	} 
 	// pressionou seta para cima
 	if (GamePad.isPressed(1)) {
-		// Serial.println("Pressionou seta para cima (1)");
+		Serial.println("Pressionou seta para cima (1)");
 		// motor3.setSpeed(255);
 		// motor3.run(FORWARD);
-		// motor1.setSpeed(255);
-		// motor1.run(BACKWARD);
+		ligaMotor1();
+		paraTrasMotor1();
 		return;
 	} 
 	// pressionou seta para baixo
 	if (GamePad.isPressed(2)) {
-	// 	Serial.println("Pressionou 2");
+		Serial.println("Pressionou seta para baixo (2)");
 	// 	motor3.setSpeed(0);
 	// 	motor3.run(BACKWARD);
-	// 	motor1.setSpeed(255);
-	// 	motor1.run(FORWARD);
+		ligaMotor1();
+		paraFrenteMotor1();
 		return;
 	} 
 	// pressionou seta para esquerda
 	if (GamePad.isPressed(3)) {
 		Serial.println("Pressionou seta para esquerda (3)");
-		// motor3.setSpeed(255);
-		// motor3.run(BACKWARD);
-		// motor1.setSpeed(0);
-		// motor1.run(FORWARD);
+		if (!obstaculo1Proximo) {
+			desligaMotor1();
+		}
+		ligaMotor2();
+		paraTrasMotor2();
 		return;
 	} 
 	// pressionou botao select
 	if (GamePad.isPressed(9)) {
 		Serial.println("Pressionou botão select (9)");
-		// motor3.setSpeed(255);
-		// motor3.run(FORWARD);
-		// motor1.setSpeed(255);
-		// motor1.run(FORWARD);
+		ligaMotor1();
+		paraFrenteMotor1();
+		ligaMotor2();
+		paraFrenteMotor2();
 		return;
 	} 
 	// pressionou quadrado
 	if (GamePad.isPressed(7)) {
 		Serial.println("Pressionou quadrado (7)");
-	// 	motor3.setSpeed(255);
-	// 	motor3.run(BACKWARD);
-	// 	motor1.setSpeed(255);
-	// 	motor1.run(BACKWARD);
+		ligaMotor1();
+		paraTrasMotor1();
+		ligaMotor2();
+		paraTrasMotor2();
 		return;
 	} 
-	motor3.setSpeed(0);
-	motor3.run(FORWARD);
+	// motor3.setSpeed(0);
+	// motor3.run(FORWARD);
 	// motor1.setSpeed(0);
 	// motor1.run(FORWARD);
-	// Serial.println("Nenhum botao apertado");
+	Serial.println("Nenhum botao apertado");
 }
+
+void ligaMotor1() {
+	digitalWrite(MOTOR1_ENABLE, HIGH);
+}
+
+void ligaMotor2() {
+	digitalWrite(MOTOR2_ENABLE, HIGH);
+}
+
+
+void desligaMotor1() {
+	digitalWrite(MOTOR1_IN1, LOW);
+	digitalWrite(MOTOR1_IN2, LOW);
+	digitalWrite(MOTOR1_ENABLE, LOW);
+}
+
+void desligaMotor2() {
+	digitalWrite(MOTOR2_IN1, LOW);
+	digitalWrite(MOTOR2_IN2, LOW);
+	digitalWrite(MOTOR2_ENABLE, LOW);
+}
+
+void paraFrenteMotor1() {
+	digitalWrite(MOTOR1_IN1, HIGH);
+	digitalWrite(MOTOR1_IN2, LOW);
+}
+
+void paraFrenteMotor2() {
+	digitalWrite(MOTOR2_IN1, HIGH);
+	digitalWrite(MOTOR2_IN2, LOW);
+}
+
+void paraTrasMotor1() {
+	digitalWrite(MOTOR1_IN1, LOW);
+	digitalWrite(MOTOR1_IN2, HIGH);
+}
+
+void paraTrasMotor2() {
+	digitalWrite(MOTOR2_IN1, LOW);
+	digitalWrite(MOTOR2_IN2, HIGH);
+}
+
+
