@@ -55,7 +55,8 @@ int SAMPLING_PERIOD_US = round(1000000 * (1.0 / SAMPLING_FREQ));
 double Real1[SAMPLES], Imag1[SAMPLES];
 ArduinoFFT<double> FFT1 = ArduinoFFT<double>(Real1, Imag1, SAMPLES, SAMPLING_FREQ, true);
 float targetFreq = 3000.0;  // frequencia de interesse.
-float magnitudeThreshold = 73.0;
+float magnitudeThreshold = 96.0;
+float previous = 0;
 
 void setup() {
 	// put your setup code here, to run once:
@@ -80,14 +81,14 @@ void setup() {
 
 void loop() {
 	// put your main code here, to run repeatedly:
-	medeDistancia();
-	//ouveChamado();
+	//medeDistancia();
+	ouveChamado();
 	//leControle();
 }
 
 void medeDistancia(){
 	medeDistancia1();
-	medeDistancia2();
+	//medeDistancia2();
 }
 
 
@@ -164,7 +165,8 @@ void ouveChamado() {
 	// obtem as magnitudes para a frequencia de interesse.
 	int targetBin = frequencyToBin(targetFreq, SAMPLING_FREQ, SAMPLES);
 	float freqMag = Real1[targetBin];
-	if (freqMag > magnitudeThreshold) {
+	if ((freqMag+previous)/2 > magnitudeThreshold) {
+		Serial.println(freqMag);
 		Serial.println("ANALOG: TEM ALGUEM CHAMANDO");
 		ligaMotor1();
 		paraTrasMotor1();
@@ -178,7 +180,8 @@ void ouveChamado() {
 			desligaMotor2();
 		}
 	}
-	delay(500);
+	previous = freqMag;
+	delay(50);
 }
 
 void leControle() {
