@@ -55,19 +55,18 @@ int SAMPLING_PERIOD_US = round(1000000 * (1.0 / SAMPLING_FREQ));
 double Real1[SAMPLES], Imag1[SAMPLES];
 ArduinoFFT<double> FFT1 = ArduinoFFT<double>(Real1, Imag1, SAMPLES, SAMPLING_FREQ, true);
 float targetFreq = 3000.0;  // frequencia de interesse.
-float magnitudeThreshold = 96.0;
+float magnitudeThreshold = 80.0;
 float previous = 0;
 
 void setup() {
-	// put your setup code here, to run once:
 	pinMode(ECHO1, INPUT);   // pino ECHO1 do sensor esta configurado como entrada recebendo o sinal refletido.
 	pinMode(TRIG1, OUTPUT);  // pino TRIG1 do sensor esta configurado como saida, acionando a emissao da onda.
 	pinMode(ECHO2, INPUT);   // pino ECHO2 do sensor esta configurado como entrada recebendo o sinal refletido.
 	pinMode(TRIG2, OUTPUT);  // pino TRIG2 do sensor esta configurado como saida, acionando a emissao da onda.
 	Serial.begin(9600);
 	Dabble.begin(9600);
-	// microfone
-	pinMode(MIC1_ANALOG, INPUT);
+	// inicializacao microfone
+	// pinMode(MIC1_ANALOG, INPUT);
 	// inicializacao dos motores
 	pinMode(MOTOR1_IN1, INPUT);
 	pinMode(MOTOR1_IN2, INPUT);
@@ -80,7 +79,6 @@ void setup() {
 }
 
 void loop() {
-	// put your main code here, to run repeatedly:
 	//medeDistancia();
 	ouveChamado();
 	//leControle();
@@ -151,8 +149,6 @@ void ouveChamado() {
 	long microseconds = micros();  // comeca tempo1 para coletar amostras.
 	for (int i = 0; i < SAMPLES; i++) {
 		Real1[i] = analogRead(MIC1_ANALOG);  // amostra do MIC1;
-		// Serial.println("Real");
-		// Serial.println(Real1[i]);
 		Imag1[i] = 0;
 		// espera tempo1 de coleta da amostra terminar.
     while ((micros() - microseconds) < SAMPLING_PERIOD_US);
@@ -169,7 +165,9 @@ void ouveChamado() {
 		Serial.println(freqMag);
 		Serial.println("ANALOG: TEM ALGUEM CHAMANDO");
 		ligaMotor1();
-		paraTrasMotor1();
+		paraFrenteMotor1();
+		ligaMotor2();
+		paraFrenteMotor2();
 	} else {
 		Serial.println(freqMag);
 		Serial.println("analog: ninguem chamando");
@@ -181,15 +179,15 @@ void ouveChamado() {
 		}
 	}
 	previous = freqMag;
-	delay(50);
+	delay(500);
 }
 
 void leControle() {
 	Dabble.processInput();
 	if (GamePad.isPressed(0)) {
 		Serial.println("Pressionou 0");
-		// motor3.setSpeed(255);
-		// motor3.run(BACKWARD);
+		ligaMotor2();
+		paraTrasMotor2();
 		ligaMotor1();
 		paraFrenteMotor1();
 		return;
@@ -197,8 +195,8 @@ void leControle() {
 	// pressionou seta para cima
 	if (GamePad.isPressed(1)) {
 		Serial.println("Pressionou seta para cima (1)");
-		// motor3.setSpeed(255);
-		// motor3.run(FORWARD);
+		ligaMotor2();
+		paraFrenteMotor2();
 		ligaMotor1();
 		paraTrasMotor1();
 		return;
@@ -206,8 +204,9 @@ void leControle() {
 	// pressionou seta para baixo
 	if (GamePad.isPressed(2)) {
 		Serial.println("Pressionou seta para baixo (2)");
-	// 	motor3.setSpeed(0);
-	// 	motor3.run(BACKWARD);
+		if (!obstaculo2Proximo){
+			desligaMotor2();
+		}
 		ligaMotor1();
 		paraFrenteMotor1();
 		return;
