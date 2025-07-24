@@ -54,7 +54,7 @@ int SAMPLING_PERIOD_US = round(1000000 * (1.0 / SAMPLING_FREQ));
 // Objeto da transformada FFT e dados.
 double Real1[SAMPLES], Imag1[SAMPLES];
 ArduinoFFT<double> FFT1 = ArduinoFFT<double>(Real1, Imag1, SAMPLES, SAMPLING_FREQ, true);
-float targetFreq = 3000.0;  // frequencia de interesse.
+float targetFreq = 425.0;  // frequencia de interesse.
 float magnitudeThreshold = 80.0;
 float previous = 0;
 
@@ -79,7 +79,7 @@ void setup() {
 }
 
 void loop() {
-	//medeDistancia();
+	medeDistancia();
 	ouveChamado();
 	//leControle();
 }
@@ -101,7 +101,7 @@ void medeDistancia1() {
   Serial.print("distancia 1 medida: ");
   Serial.print(dist1);
   Serial.println(" cm");
-	if (dist1 < 5) {
+	if (dist1 < 25) {
 		obstaculo1Proximo = true;
 		Serial.println("OBSTACULO 1 MUITO PROXIMO");
 		ligaMotor1();
@@ -109,7 +109,6 @@ void medeDistancia1() {
 	} else {
 		obstaculo1Proximo = false;
 		Serial.println("obstaculo 1 muito longe");
-		desligaMotor1();
 	}
   delay(500);
 }
