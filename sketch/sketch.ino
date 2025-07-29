@@ -7,12 +7,12 @@
   * Bluetooth para controle remoto via celular  
 */
 
+#define CUSTOM_SETTINGS
+#define INCLUDE_GAMEPAD_MODULE
 #include "arduinoFFT.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Dabble.h>
-#define CUSTOM_SETTINGS
-#define INCLUDE_GAMEPAD_MODULE
 
 
 /****************************************************
@@ -41,6 +41,8 @@ bool obstaculo2Proximo = false;
 #define MOTOR2_IN2 10
 #define MOTOR2_ENABLE 13
 
+bool toggleMotor = false;
+
 /**********************************************
  * Microfone Módulo Amplificador De Som LM393 *
  *********************************************/
@@ -54,9 +56,10 @@ int SAMPLING_PERIOD_US = round(1000000 * (1.0 / SAMPLING_FREQ));
 // Objeto da transformada FFT e dados.
 double Real1[SAMPLES], Imag1[SAMPLES];
 ArduinoFFT<double> FFT1 = ArduinoFFT<double>(Real1, Imag1, SAMPLES, SAMPLING_FREQ, true);
-float targetFreq = 425.0;  // frequencia de interesse.
+float targetFreq = 3000.0;  // frequencia de interesse.
 float magnitudeThreshold = 80.0;
 float previous = 0;
+bool isCalling = false;
 
 void setup() {
 	pinMode(ECHO1, INPUT);   // pino ECHO1 do sensor esta configurado como entrada recebendo o sinal refletido.
@@ -64,9 +67,9 @@ void setup() {
 	pinMode(ECHO2, INPUT);   // pino ECHO2 do sensor esta configurado como entrada recebendo o sinal refletido.
 	pinMode(TRIG2, OUTPUT);  // pino TRIG2 do sensor esta configurado como saida, acionando a emissao da onda.
 	Serial.begin(9600);
-	Dabble.begin(9600);
+	Dabble.begin(9600, 2, 3);
 	// inicializacao microfone
-	// pinMode(MIC1_ANALOG, INPUT);
+	pinMode(MIC1_ANALOG, INPUT);
 	// inicializacao dos motores
 	pinMode(MOTOR1_IN1, INPUT);
 	pinMode(MOTOR1_IN2, INPUT);
@@ -81,7 +84,7 @@ void setup() {
 void loop() {
 	medeDistancia();
 	ouveChamado();
-	//leControle();
+	leControle();
 }
 
 void medeDistancia(){
@@ -125,7 +128,7 @@ void medeDistancia2() {
   Serial.print("distancia 2 medida: ");
   Serial.print(dist2);
   Serial.println(" cm");
-	if (dist2 < 5) {
+	if (dist2 < 25) {
 		obstaculo2Proximo = true;
 		Serial.println("OBSTACULO 2 MUITO PROXIMO");
 		ligaMotor2();
@@ -161,15 +164,15 @@ void ouveChamado() {
 	int targetBin = frequencyToBin(targetFreq, SAMPLING_FREQ, SAMPLES);
 	float freqMag = Real1[targetBin];
 	if ((freqMag+previous)/2 > magnitudeThreshold) {
-		Serial.println(freqMag);
-		Serial.println("ANALOG: TEM ALGUEM CHAMANDO");
+		Serial.println("Mic1: TEM ALGUEM CHAMANDO");
 		ligaMotor1();
 		paraFrenteMotor1();
 		ligaMotor2();
 		paraFrenteMotor2();
+		isCalling = true;
 	} else {
-		Serial.println(freqMag);
-		Serial.println("analog: ninguem chamando");
+		Serial.println("Mic1: ninguem chamando");
+		isCalling = false;
 		if (!obstaculo1Proximo){
 			desligaMotor1();
 		}
@@ -182,18 +185,11 @@ void ouveChamado() {
 }
 
 void leControle() {
+	Serial.println("le controle");
 	Dabble.processInput();
-	if (GamePad.isPressed(0)) {
-		Serial.println("Pressionou 0");
-		ligaMotor2();
-		paraTrasMotor2();
-		ligaMotor1();
-		paraFrenteMotor1();
-		return;
-	} 
 	// pressionou seta para cima
-	if (GamePad.isPressed(1)) {
-		Serial.println("Pressionou seta para cima (1)");
+	if (GamePad.isUpPressed()) {
+		Serial.println("Pressionou seta para cima");
 		ligaMotor2();
 		paraFrenteMotor2();
 		ligaMotor1();
@@ -201,8 +197,8 @@ void leControle() {
 		return;
 	} 
 	// pressionou seta para baixo
-	if (GamePad.isPressed(2)) {
-		Serial.println("Pressionou seta para baixo (2)");
+	if (GamePad.isDownPressed()) {
+		Serial.println("Pressionou seta para baixo");
 		if (!obstaculo2Proximo){
 			desligaMotor2();
 		}
@@ -211,8 +207,18 @@ void leControle() {
 		return;
 	} 
 	// pressionou seta para esquerda
-	if (GamePad.isPressed(3)) {
-		Serial.println("Pressionou seta para esquerda (3)");
+	if (GamePad.isLeftPressed()) {
+		Serial.println("Pressionou seta para esquerda");
+		if (!obstaculo1Proximo) {
+			desligaMotor1();
+		}
+		ligaMotor2();
+		paraTrasMotor2();
+		return;
+	} 
+	// pressionou seta para direita
+	if (GamePad.isRightPressed()) {
+		Serial.println("Pressionou seta para direita");
 		if (!obstaculo1Proximo) {
 			desligaMotor1();
 		}
@@ -221,8 +227,8 @@ void leControle() {
 		return;
 	} 
 	// pressionou botao select
-	if (GamePad.isPressed(9)) {
-		Serial.println("Pressionou botão select (9)");
+	if (GamePad.isSelectPressed()) {
+		Serial.println("Pressionou botão select");
 		ligaMotor1();
 		paraFrenteMotor1();
 		ligaMotor2();
@@ -230,15 +236,46 @@ void leControle() {
 		return;
 	} 
 	// pressionou quadrado
-	if (GamePad.isPressed(7)) {
-		Serial.println("Pressionou quadrado (7)");
+	if (GamePad.isSquarePressed()) {
+		Serial.println("Pressionou quadrado");
 		ligaMotor1();
 		paraTrasMotor1();
 		ligaMotor2();
 		paraTrasMotor2();
 		return;
 	} 
-	Serial.println("Nenhum botao apertado");
+	  if (GamePad.isCirclePressed())
+  {
+    Serial.print("Circle");
+  }
+
+  if (GamePad.isCrossPressed())
+  {
+    Serial.print("Cross");
+  }
+
+  if (GamePad.isTrianglePressed())
+  {
+    Serial.print("Triangle");
+  }
+
+  if (GamePad.isStartPressed())
+  {
+    Serial.print("Start");
+  }
+
+	if (toggleMotor && !obstaculo1Proximo && !isCalling) {
+		ligaMotor1();
+		paraFrenteMotor1();
+		desligaMotor2();
+	} else if (!obstaculo1Proximo && !isCalling) {
+		ligaMotor2();
+		paraFrenteMotor2();
+		desligaMotor1();
+	}
+	toggleMotor = !toggleMotor;
+	Serial.println("\n");
+	delay(800);
 }
 
 void ligaMotor1() {
